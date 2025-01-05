@@ -1,4 +1,4 @@
-
+#pragma region
 #define GLAD_GL_IMPLEMENTATION
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
@@ -65,6 +65,7 @@ double get_time() {
 #include <stdarg.h>
 #define sleep(x) usleep((x) * 1000)
 #endif
+#pragma endregion
 
 void error_callback(const int error, const char *description) {
     fprintf(stderr, "GLFW Error %d: %s", error, description);
@@ -156,10 +157,10 @@ int compile_shader(char *path, const int type, GLuint *shader) {
     GLint vertex_status;
     GL_CALL(glGetShaderiv(*shader, GL_COMPILE_STATUS, &vertex_status));
     if (vertex_status == 0) {
-        fprintf(stderr, "Failed to compile shader: %s", path);
+        fprintf(stderr, "Failed to compile shader: %s\n", path);
     }
 
-    print("Shader compiled successfully: %s", path);
+    print("Shader compiled successfully: %s\n", path);
     return vertex_status == 0;
 }
 
@@ -189,15 +190,14 @@ int create_program(char *vertex_path, char *fragment_path, GLuint *program) {
     GL_CALL(glDeleteShader(fragment_shader));
 
     GLint position_attribute;
+    GLint color_attribute;
     GL_CALL_RET(position_attribute, glGetAttribLocation(*program, "position"));
-    GL_CALL(glVertexAttribPointer(position_attribute, 2, GL_FLOAT, GL_FALSE, 0, 0));
+    GL_CALL_RET(color_attribute, glGetAttribLocation(*program, "color"));
+    printf("color_attribute: %d\n", color_attribute);
+    GL_CALL(glVertexAttribPointer(position_attribute, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0));
+    GL_CALL(glVertexAttribPointer(color_attribute, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2*sizeof(float))));
     GL_CALL(glEnableVertexAttribArray(position_attribute));
-
-    GLint tri_color_loc;
-    GL_CALL_RET(tri_color_loc, glGetUniformLocation(*program, "triColor"));
-    print("tri_color_loc = %i", tri_color_loc);
-
-    glUniform3f(tri_color_loc, 1.0f, 0.0f, 1.0f);
+    GL_CALL(glEnableVertexAttribArray(color_attribute));
 
     return 0;
 }
@@ -236,7 +236,10 @@ int opengl_init(GLFWwindow *window_ptr) {
     return 0;
 }
 
-void draw();
+void draw() {
+    GL_CALL(glClear(GL_COLOR_BUFFER_BIT));
+    GL_CALL(glDrawArrays(GL_TRIANGLES, 0, 3));
+}
 
 int main() {
     print("### Setup ###");
@@ -272,19 +275,11 @@ int main() {
         glfwSwapBuffers(window_ptr);
         glfwPollEvents();
 
-        while (get_time() - current_time < target_delta);
-        //while (get_time() - current_time < target_delta) {
-        //    while (get_time() - current_time < target_delta);
-        //}
+        while (get_time() - current_time < target_delta); // TODO: fix bad busy waiting
     }
 
     print("### Exiting Application ###");
 
     glfwTerminate();
     return 0;
-}
-
-void draw() {
-    GL_CALL(glClear(GL_COLOR_BUFFER_BIT));
-    GL_CALL(glDrawArrays(GL_TRIANGLES, 0, 3));
 }
